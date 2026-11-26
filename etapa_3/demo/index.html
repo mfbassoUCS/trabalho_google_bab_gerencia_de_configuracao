@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-BAB · Binary Authorization for Borg</title>
+<style>
+  :root{
+    --bg:#0f1218; --card:#181d26; --card2:#1f2530; --line:#2c3442; --txt:#e8ecf2; --mut:#8b95a7;
+    --ok:#22c55e; --ok-bg:#0f2a1a; --err:#ef4444; --err-bg:#2c1214; --warn:#f59e0b; --acc:#60a5fa;
+    --mono:ui-monospace,"Cascadia Code","Consolas",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:17px/1.45 system-ui,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  h1{margin:0;font-size:22px}
+  h1 small{display:block;font-size:14px;font-weight:400;color:var(--mut)}
+  .cenarios{display:flex;gap:8px;flex-wrap:wrap}
+  .cenarios button{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:15px;cursor:pointer}
+  .cenarios button:hover{border-color:var(--acc)}
+  .cenarios button.ativo{background:var(--acc);color:#0b1220;border-color:var(--acc);font-weight:600}
+  main{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;gap:0;padding:18px 24px;align-items:stretch}
+  .seta{display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:26px}
+  .etapa{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .etapa h2{margin:0;font-size:19px;display:flex;align-items:center;gap:10px}
+  .num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--acc);color:#0b1220;font-size:15px;font-weight:700}
+  .sub{color:var(--mut);font-size:14px;margin-top:-6px}
+  label{font-size:14px;color:var(--mut);display:flex;flex-direction:column;gap:4px}
+  select,textarea{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;font-size:15px;padding:7px 9px}
+  textarea{font-family:var(--mono);font-size:14px;resize:vertical;min-height:120px;width:100%}
+  .linha{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{border:0;border-radius:9px;padding:11px 14px;font-size:16px;font-weight:600;cursor:pointer;background:var(--acc);color:#0b1220}
+  .btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+  .btn.perigo{background:#3a1d1f;color:#fecaca;border:1px solid #7f1d1d}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .pulsa{animation:pulsa 1.3s ease-in-out infinite}
+  @keyframes pulsa{0%,100%{box-shadow:0 0 0 0 rgba(96,165,250,.0)}50%{box-shadow:0 0 0 5px rgba(96,165,250,.45)}}
+  .res{border-radius:9px;padding:10px 12px;font-size:15px;min-height:44px}
+  .res.ok{background:var(--ok-bg);color:#bbf7d0;border:1px solid #14532d}
+  .res.err{background:var(--err-bg);color:#fecaca;border:1px solid #7f1d1d}
+  .res.vazio{border:1px dashed var(--line);color:var(--mut)}
+  .selo{font-family:var(--mono);font-size:13.5px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;line-height:1.6;word-break:break-all}
+  .selo .k{color:var(--mut)}
+  .selo .t{font-family:system-ui,"Segoe UI",sans-serif;font-weight:600;font-size:14px;margin-bottom:4px}
+  .muda{color:var(--err);font-weight:700}
+  .checks{display:flex;flex-direction:column;gap:8px}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border-radius:9px;background:var(--card2);border:1px solid var(--line);font-size:15px;opacity:.45;transition:all .25s}
+  .check.feito{opacity:1}
+  .check .ic{font-size:18px;line-height:1.2;width:20px;text-align:center}
+  .check.ok{border-color:#14532d}.check.ok .ic{color:var(--ok)}
+  .check.err{border-color:#7f1d1d;background:var(--err-bg)}.check.err .ic{color:var(--err)}
+  .check.nd .ic{color:var(--mut)}
+  .check .det{display:block;color:var(--mut);font-size:13px}
+  .veredito{border-radius:12px;padding:14px;text-align:center;font-size:26px;font-weight:800;letter-spacing:.5px}
+  .veredito.ok{background:var(--ok);color:#052e14}
+  .veredito.err{background:var(--err);color:#fff}
+  .veredito small{display:block;font-size:14px;font-weight:500;letter-spacing:0;margin-top:2px}
+  .job{font-family:var(--mono);font-size:13.5px;background:#05070a;border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:#a7f3d0}
+  footer{padding:4px 24px 18px;color:var(--mut);font-size:13px}
+  .narra{margin:0 24px;padding:10px 14px;border-left:4px solid var(--acc);background:var(--card);border-radius:0 8px 8px 0;font-size:16px;min-height:22px}
+  @media (max-width:1050px){main{grid-template-columns:1fr}.seta{transform:rotate(90deg);height:30px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mini-BAB <small>Binary Authorization for Borg · só roda em produção o que tem procedência comprovada</small></h1>
+  <div class="cenarios">
+    <button data-c="0">↺ Reiniciar</button>
+  </div>
+</header>
+
+
+<main>
+  <!-- ETAPA 1 -->
+  <section class="etapa">
+    <h2><span class="num">1</span> Código e revisão</h2>
+    <div class="sub">Ninguém aprova o próprio código.</div>
+    <div class="linha">
+      <label>Autor
+        <select id="autor"><option>Alice</option><option>Mallory</option></select>
+      </label>
+      <label>Revisor
+        <select id="revisor"><option>Bob</option><option>Mallory</option><option value="">— ninguém —</option></select>
+      </label>
+    </div>
+    <label>Código do serviço "pagamentos"
+      <textarea id="codigo" spellcheck="false"></textarea>
+    </label>
+    <button class="btn" id="bRevisar">Enviar para revisão</button>
+    <div class="res vazio" id="rRevisao">Aguardando revisão…</div>
+  </section>
+
+  <div class="seta">➜</div>
+
+  <!-- ETAPA 2 -->
+  <section class="etapa">
+    <h2><span class="num">2</span> Build</h2>
+    <div class="sub">Gera o binário e um <b>selo de procedência</b> assinado.</div>
+    <div class="linha">
+      <button class="btn" id="bBuildOficial">🏭 Build oficial</button>
+      <button class="btn sec" id="bBuildLaptop">💻 Build no notebook</button>
+    </div>
+    <div id="selo" class="res vazio">Nenhum binário gerado ainda.</div>
+    <button class="btn perigo" id="bAlterar" disabled>✏️ Alterar o binário depois do build</button>
+  </section>
+
+  <div class="seta">➜</div>
+
+  <!-- ETAPA 3 -->
+  <section class="etapa">
+    <h2><span class="num">3</span> Deploy no Borg</h2>
+    <div class="sub">O Borg confere as provas antes de liberar.</div>
+    <button class="btn" id="bDeploy" disabled>🚀 Pedir deploy</button>
+    <div class="checks">
+      <div class="check" id="c1"><span class="ic">○</span><span>Selo assinado pelo <b>build oficial</b>?<span class="det"></span></span></div>
+      <div class="check" id="c2"><span class="ic">○</span><span>Binário <b>igual</b> ao descrito no selo?<span class="det"></span></span></div>
+      <div class="check" id="c3"><span class="ic">○</span><span>Código <b>revisado</b> por outra pessoa?<span class="det"></span></span></div>
+    </div>
+    <div id="veredito"></div>
+  </section>
+</main>
+
+<footer>Hash SHA-256 e assinatura ECDSA reais, calculados no navegador. As chaves são geradas a cada vez que a página abre. No Google, quem faz essa checagem é o Borg Prime, e o selo segue o formato de proveniência SLSA.</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const CODIGO_OK = `def pagar(pedido):
+    cobrar(pedido.cartao, pedido.valor)
+    return "pago"
+VERSAO = "1.1"`;
+
+const enc = new TextEncoder();
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+const sha = async s => hex(await crypto.subtle.digest("SHA-256", enc.encode(s)));
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const curto = h => h.slice(0, 8) + "…" + h.slice(-4);
+const espera = ms => new Promise(r => setTimeout(r, ms));
+
+let chaves = {};          // builder oficial e notebook da Mallory
+const revisoes = {};      // commit -> {autor, revisor}
+let binario = null;       // conteúdo do binário gerado
+let selo = null;          // {dados, assinatura}
+
+async function iniciarChaves() {
+  const alg = { name: "ECDSA", namedCurve: "P-256" };
+  chaves.oficial = await crypto.subtle.generateKey(alg, false, ["sign", "verify"]);
+  chaves.notebook = await crypto.subtle.generateKey(alg, false, ["sign", "verify"]);
+}
+const assinar = (k, txt) => crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, k.privateKey, enc.encode(txt));
+const verificar = (k, sig, txt) => crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, k.publicKey, sig, enc.encode(txt));
+
+const commitDe = async () => (await sha($("codigo").value)).slice(0, 7);
+function destaca(id) {
+  document.querySelectorAll(".pulsa").forEach(e => e.classList.remove("pulsa"));
+  if (id) $(id).classList.add("pulsa");
+}
+
+// ---------- Etapa 1: revisão
+$("bRevisar").onclick = async () => {
+  const autor = $("autor").value, revisor = $("revisor").value, commit = await commitDe();
+  const r = $("rRevisao");
+  if (!revisor || revisor === autor) delete revisoes[commit];
+  if (!revisor) {
+    r.className = "res err"; r.innerHTML = `✘ Commit <code>${commit}</code> <b>sem aprovação</b>: ninguém revisou.`;
+  } else if (revisor === autor) {
+    r.className = "res err"; r.innerHTML = `✘ ${autor} tentou aprovar o próprio código. <b>Recusado.</b>`;
+  } else {
+    revisoes[commit] = { autor, revisor };
+    r.className = "res ok"; r.innerHTML = `✔ Commit <code>${commit}</code> de ${autor}, <b>aprovado por ${revisor}</b>.`;
+  }
+  destaca(null); proximo();
+};
+
+// ---------- Etapa 2: build
+async function build(tipo) {
+  binario = "BINARIO:" + $("codigo").value;
+  const dados = {
+    commit: await commitDe(),
+    construido_por: tipo === "oficial" ? "build oficial" : "notebook da Mallory",
+    hash: await sha(binario),
+  };
+  const txt = JSON.stringify(dados);
+  selo = { dados, txt, assinatura: await assinar(chaves[tipo], txt) };
+  mostrarSelo();
+  $("bAlterar").disabled = false; $("bDeploy").disabled = false;
+  limparDeploy(); destaca(null); proximo();
+}
+async function mostrarSelo(alterado) {
+  const hAtual = await sha(binario);
+  $("selo").className = "selo";
+  $("selo").innerHTML = `<div class="t">🏷️ Selo de procedência</div>
+    <span class="k">commit:</span> ${selo.dados.commit}<br>
+    <span class="k">construído por:</span> ${selo.dados.construido_por}<br>
+    <span class="k">hash no selo:</span> ${curto(selo.dados.hash)}<br>
+    <span class="k">hash do binário:</span> <span class="${alterado ? "muda" : ""}">${curto(hAtual)}</span><br>
+    <span class="k">assinatura:</span> ${b64(selo.assinatura).slice(0, 22)}…`;
+}
+$("bBuildOficial").onclick = () => build("oficial");
+$("bBuildLaptop").onclick = () => build("notebook");
+$("bAlterar").onclick = async () => {
+  binario += "\n# código injetado depois do build";
+  await mostrarSelo(true); limparDeploy(); destaca(null); proximo();
+};
+
+// ---------- Etapa 3: deploy
+function limparDeploy() {
+  for (const id of ["c1", "c2", "c3"]) {
+    const c = $(id); c.className = "check"; c.querySelector(".ic").textContent = "○"; c.querySelector(".det").textContent = "";
+  }
+  $("veredito").innerHTML = "";
+}
+function marca(id, estado, det) {
+  const c = $(id); c.className = "check feito " + estado;
+  c.querySelector(".ic").textContent = { ok: "✔", err: "✘", nd: "⊘" }[estado];
+  c.querySelector(".det").textContent = det;
+}
+$("bDeploy").onclick = async () => {
+  limparDeploy(); destaca(null); $("bDeploy").disabled = true;
+  const falhas = [];
+
+  await espera(450);
+  const assinOk = await verificar(chaves.oficial, selo.assinatura, selo.txt);
+  marca("c1", assinOk ? "ok" : "err", assinOk ? "assinatura confere com a chave do build oficial"
+                                              : `assinado por "${selo.dados.construido_por}", chave que o Borg não reconhece`);
+  if (!assinOk) falhas.push("selo sem assinatura válida");
+
+  await espera(650);
+  if (!assinOk) {
+    marca("c2", "nd", "não dá para confiar num selo sem assinatura válida");
+    await espera(350);
+    marca("c3", "nd", "não dá para confiar num selo sem assinatura válida");
+  } else {
+    const hAtual = await sha(binario);
+    const igual = hAtual === selo.dados.hash;
+    marca("c2", igual ? "ok" : "err", igual ? "hash idêntico" : `selo diz ${curto(selo.dados.hash)}, binário é ${curto(hAtual)}`);
+    if (!igual) falhas.push("binário alterado depois do build");
+
+    await espera(650);
+    const rev = revisoes[selo.dados.commit];
+    marca("c3", rev ? "ok" : "err", rev ? `${rev.autor} escreveu, ${rev.revisor} aprovou`
+                                         : `commit ${selo.dados.commit} não tem aprovação registrada`);
+    if (!rev) falhas.push("código sem revisão");
+  }
+
+  await espera(500);
+  if (falhas.length === 0) {
+    $("veredito").innerHTML = `<div class="veredito ok">✅ PERMITIDO<small>credencial de produção emitida</small></div>
+      <div class="job" style="margin-top:10px">▶ pagamentos v1.1 no ar — processando pedidos</div>`;
+  } else {
+    $("veredito").innerHTML = `<div class="veredito err">⛔ NEGADO<small>${falhas.join(" · ")}</small></div>`;
+  }
+  $("bDeploy").disabled = false;
+};
+
+// ---------- guia do próximo passo
+function proximo() {
+  const c = cenarioAtual;
+  if (!c) return;
+  if (!$("rRevisao").classList.contains("vazio") && !selo) destaca(c === 3 ? "bBuildLaptop" : "bBuildOficial");
+  else if (selo && c === 4 && !binario.includes("injetado")) destaca("bAlterar");
+  else if (selo && !$("veredito").innerHTML) destaca("bDeploy");
+}
+
+// ---------- cenários
+let cenarioAtual = 0;
+function aplicar() {
+  $("autor").value = "Alice"; $("revisor").value = "Bob"; $("codigo").value = CODIGO_OK;
+  $("rRevisao").className = "res vazio"; $("rRevisao").textContent = "Aguardando revisão…";
+  $("selo").className = "res vazio"; $("selo").textContent = "Nenhum binário gerado ainda.";
+  binario = null; selo = null;
+  for (const k in revisoes) delete revisoes[k];
+  $("bAlterar").disabled = true; $("bDeploy").disabled = true;
+  limparDeploy();
+}
+document.querySelector('.cenarios button[data-c="0"]').onclick = aplicar;
+// trocar autor ou revisor exige enviar para revisão de novo
+for (const id of ["autor", "revisor"]) $(id).addEventListener("change", () => {
+  $("rRevisao").className = "res vazio"; $("rRevisao").textContent = "Mudou: clique em Enviar para revisão.";
+});
+// editar o código muda o commit: a revisão anterior deixa de valer
+$("codigo").addEventListener("input", () => { $("rRevisao").className = "res vazio"; $("rRevisao").textContent = "Código mudou: precisa de nova revisão."; });
+
+(async () => {
+  if (!window.crypto || !crypto.subtle) {
+    document.querySelector("main").insertAdjacentHTML("beforebegin", '<p class="narra">⚠ Este navegador não liberou a criptografia (crypto.subtle). Abra no Chrome, Edge ou Firefox atualizados.</p>');
+    return;
+  }
+  await iniciarChaves();
+  aplicar();
+})();
+</script>
+</body>
+</html>
